@@ -1,0 +1,46 @@
+values:
+  # Script Configuration
+  - name: GitHubRepoUrl
+    display_name: URL to the Git repository where your workflow scripts are stored
+    string_value: "https://raw.githubusercontent.com/panda1100/ciq_slm_fine_tuning/main"
+
+  - name: DataPrepScript
+    display_name: Data Preparation Script
+    string_value: "data_prep.py"
+
+  - name: ModelLoadScript
+    display_name: Model Loading Script
+    string_value: "model_load.py"
+
+  - name: FineTuningScript
+    display_name: Fine-tuning Script
+    string_value: "fine_tuning.py"
+
+  # Container and Resource Configuration
+  - name: UnslothContainerImage
+    display_name: URL to the container image that will provide the environment for Unsloth
+    string_value: "docker://unsloth/unsloth:stable"
+
+  - name: OllamaContainerImage
+    display_name: URL to the container image that will provide the environment for Ollama
+    string_value: "docker://ollama/ollama"
+  
+  - name: LlamaCppContainerImage
+    display_name: URL to the container image that will provide the environment for Open WebUI and built-in Llama.cpp
+    string_value: "docker://ghcr.io/ggml-org/llama.cpp:full"
+
+  - name: OpenWebUIContainerImage
+    display_name: URL to the container image that will provide the environment for Open WebUI and built-in Ollama
+    string_value: "docker://ghcr.io/open-webui/open-webui:ollama"
+  
+  - name: VolumeReference
+    display_name: Volume Reference for the scratch directory
+    string_value: "volume://user/ephemeral/scratch"
+
+  - name: CpuCores
+    display_name: CPU Cores
+    uint_value: 16
+
+  - name: MemoryGb
+    display_name: Memory (GB)
+    uint_value: 32

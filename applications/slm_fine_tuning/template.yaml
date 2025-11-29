@@ -1,0 +1,141 @@
+# Copyright 2025 CIQ, Inc. All rights reserved.
+version: v1
+volumes:
+  scratch:
+    ingress:
+      - destination:
+          uri: file://{{ .DataPrepScript }}
+        source:
+          uri: {{ .GitHubRepoUrl }}/{{ .DataPrepScript }}
+      - destination:
+          uri: file://{{ .ModelLoadScript }}
+        source:
+          uri: {{ .GitHubRepoUrl }}/{{ .ModelLoadScript }}
+      - destination:
+          uri: file://{{ .FineTuningScript }}
+        source:
+          uri: {{ .GitHubRepoUrl }}/{{ .FineTuningScript }}
+    reference: {{ .VolumeReference }}
+
+jobs:
+  data-preparation:
+    command:
+      - python3
+      - /scratch/{{ .DataPrepScript }}
+    cwd: /scratch
+    image:
+      uri: {{ .UnslothContainerImage }}
+    mounts:
+      scratch:
+        location: /scratch
+    resource:
+      cpu:
+        cores: 4
+      memory:
+        size: 16GB
+      devices:
+        nvidia.com/gpu: {{ .GPUNumber }}
+  model-loading:
+    command:
+      - python3
+      - /scratch/{{ .ModelLoadScript }}
+    cwd: /scratch
+    image:
+      uri: {{ .UnslothContainerImage }}
+    mounts:
+      scratch:
+        location: /scratch
+    requires:
+      - data-preparation
+    resource:
+      cpu:
+        cores: 4
+      memory:
+        size: 16GB
+      devices:
+        nvidia.com/gpu: {{ .GPUNumber }}
+  fine-tuning:
+    command:
+      - python3
+      - /scratch/{{ .FineTuningScript }}
+    cwd: /scratch
+    image:
+      uri: {{ .UnslothContainerImage }}
+    mounts:
+      scratch:
+        location: /scratch
+    policy:
+      timeout:
+        execute: {{ .TrainingTimeout }}
+    requires:
+      - model-loading
+    resource:
+      cpu:
+        cores: 4
+      memory:
+        size: 16GB
+      devices:
+        nvidia.com/gpu: {{ .GPUNumber }}
+  converting-model-gguf:
+    command:
+      - python3
+      - '/app/convert_hf_to_gguf.py'
+      - '--outfile'
+      - 'merged_model.BF16.gguf'
+      - '--outtype'
+      - 'bf16'
+      - '--split-max-size'
+      - '50G'
+      - 'merged_model'
+    cwd: /scratch
+    image:
+      uri: {{ .LlamaCppContainerImage }}
+    mounts:
+      scratch:
+        location: /scratch
+    requires:
+      - fine-tuning
+    resource:
+      cpu:
+        cores: {{ .CpuCores }}
+      memory:
+        size: {{ .MemoryGb }}GB  
+  exporting-ollama-model:
+    command:
+      - ollama
+      - create
+      - 'finetuned_llama-3-8b'
+      - '-f'
+      - './merged_model/Modelfile'
+    cwd: /scratch
+    image:
+      uri: {{ .OllamaContainerImage }}
+    mounts:
+      scratch:
+        location: /scratch
+    requires:
+      - converting-model-gguf
+    resource:
+      cpu:
+        cores: {{ .CpuCores }}
+      memory:
+        size: {{ .MemoryGb }}GB  
+  serving-model:
+    env:
+      - WEBUI_AUTH=False
+      - HF_HUB_OFFLINE=1
+    command:
+      - bash /start.sh
+    cwd: /app
+    image:
+      uri: {{ .OpenWebUIContainerImage }}
+    mounts:
+      scratch:
+        location: /root/.ollama
+    requires:
+      - exporting-ollama-model
+    resource:
+      cpu:
+        cores: {{ .CpuCores }}
+      memory:
+        size: {{ .MemoryGb }}GB
