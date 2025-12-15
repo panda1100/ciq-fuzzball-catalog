@@ -79,14 +79,14 @@ jobs:
   converting-model-gguf:
     command:
       - python3
-      - '/scratch/llama.cpp/convert_hf_to_gguf.py'
+      - '/scratch/llama.cpp/unsloth_convert_hf_to_gguf.py'
       - '--outfile'
-      - 'merged_model.BF16.gguf'
+      - 'finetuned.BF16.gguf'
       - '--outtype'
       - 'bf16'
       - '--split-max-size'
       - '50G'
-      - 'merged_model'
+      - 'finetuned'
     cwd: /scratch
     image:
       uri: {{ .LlamaCppContainerImage }}
@@ -101,12 +101,9 @@ jobs:
       memory:
         size: {{ .MemoryGb }}GB  
   exporting-ollama-model:
-    command:
-      - ollama
-      - create
-      - 'finetuned_llama-3-8b'
-      - '-f'
-      - './merged_model/Modelfile'
+    script: |
+      #!/bin/bash
+      ollama serve & sleep 3 && ollama create finetuned -f ./finetuned/Modelfile
     cwd: /scratch
     image:
       uri: {{ .OllamaContainerImage }}
