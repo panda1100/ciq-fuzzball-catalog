@@ -79,7 +79,7 @@ jobs:
   converting-model-gguf:
     command:
       - python3
-      - '/app/convert_hf_to_gguf.py'
+      - '/scratch/llama.cpp/convert_hf_to_gguf.py'
       - '--outfile'
       - 'merged_model.BF16.gguf'
       - '--outtype'
